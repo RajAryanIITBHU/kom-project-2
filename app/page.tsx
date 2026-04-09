@@ -315,10 +315,10 @@ export default function KinematicsHome() {
             </div>
             <div className="grid grid-cols-[100px_1fr]">
               <span className="text-left">24135100</span>
-              <span className="text-left">Rajnish Goat</span>
+              <span className="text-left">Rajnish Kumar</span>
             </div>
             <div className="grid grid-cols-[100px_1fr]">
-              <span className="text-left">24135101</span>
+              <span className="text-left">24135102</span>
               <span className="text-left">Ridhima Singh</span>
             </div>
           </div>
