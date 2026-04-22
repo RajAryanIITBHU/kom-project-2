@@ -42,64 +42,55 @@ const CODE_JS = `/**
  * - as (slider acceleration)
  */
 
-function kinematics(r, l, e, omega, thetaDeg, alpha = 0) {
-  const theta = (thetaDeg * Math.PI) / 180;
+function kinematics(
+  r: number,
+  l: number,
+  e: number,
+  omega: number,
+  thetaDeg: number,
+  alpha: number = 0,
+): KinResult {
+  const th = (thetaDeg * Math.PI) / 180;
+  const sinTh = Math.sin(th);
+  const cosTh = Math.cos(th);
 
-  const sinTh = Math.sin(theta);
-  const cosTh = Math.cos(theta);
-
-  // ── Step 1: Geometry (constraint) ──
   const sinBeta = (e - r * sinTh) / l;
 
-  // Check if configuration is physically possible
   if (Math.abs(sinBeta) > 1) {
-    return invalid();
+    return {
+      valid: false,
+      beta: NaN,
+      omega2: NaN,
+      alpha2: NaN,
+      vs: NaN,
+      as_: NaN,
+    };
   }
 
   const beta = Math.asin(sinBeta);
   const cosBeta = Math.cos(beta);
 
-  // ── Step 2: Angular velocity of rod ──
+  // 1. Rod Angular Velocity - CORRECT ✓
   const omega2 = (-r * omega * cosTh) / (l * cosBeta);
 
-  // ── Step 3: Slider velocity ──
-  const vs = (r * omega * Math.sin(beta - theta)) / cosBeta;
+  // 2. Slider Velocity - CORRECT ✓
+  const vs = (r * omega * Math.sin(beta - th)) / cosBeta;
 
-  // ── Step 4: Angular acceleration of rod ──
+  // 3. Rod Angular Acceleration - CORRECTED ✗
   const alpha2 =
-    (
-      -r * alpha * cosTh +
-      r * omega * omega * sinTh +
-      l * omega2 * omega2 * Math.sin(beta)
-    ) / (l * cosBeta);
+    (r * alpha * cosTh -
+      r * omega * omega * sinTh -
+      l * omega2 * omega2 * sinBeta) /
+    (l * cosBeta);
 
-  // ── Step 5: Slider acceleration ──
-  const c1 = r * alpha * Math.sin(beta - theta) - l * omega2 * omega2;
-  const c2 = r * omega * omega * Math.cos(beta - theta);
+  // 4. Slider Acceleration - CORRECTED ✗
+  const term1 = r * alpha * Math.sin(beta - th);
+  const term2 = r * omega * omega * Math.cos(beta - th);
+  const term3 = l * omega2 * omega2;
+  const as_ = (term1 - term2 - term3) / cosBeta;
 
-  const as = (c1 - c2) / cosBeta;
-
-  return {
-    valid: true,
-    beta,
-    omega2,
-    alpha2,
-    vs,
-    as,
-  };
+  return { valid: true, beta, omega2, alpha2, vs, as_ };
 }
-
-function invalid() {
-  return {
-    valid: false,
-    beta: NaN,
-    omega2: NaN,
-    alpha2: NaN,
-    vs: NaN,
-    as: NaN,
-  };
-}
-
 
 // Example
 console.log(kinematics(40, 120, 20, 10, 60));`;
@@ -291,7 +282,6 @@ function kinematics(
 
   const sinBeta = (e - r * sinTh) / l;
 
-  // Safety check: Ensure the mechanism can physically connect at this angle
   if (Math.abs(sinBeta) > 1) {
     return {
       valid: false,
@@ -306,28 +296,30 @@ function kinematics(
   const beta = Math.asin(sinBeta);
   const cosBeta = Math.cos(beta);
 
-  // 1. Rod Angular Velocity (omega2 / C++ velb)
+  // 1. Rod Angular Velocity - CORRECT ✓
   const omega2 = (-r * omega * cosTh) / (l * cosBeta);
 
-  // 2. Slider Velocity (vs / C++ vels)
+  // 2. Slider Velocity - CORRECT ✓
   const vs = (r * omega * Math.sin(beta - th)) / cosBeta;
 
-  // 3. Rod Angular Acceleration (alpha2 / C++ accb)
-  // FIXED: Reverted the incorrect negative signs on the omega^2 and omega2^2 terms.
+  // 3. Rod Angular Acceleration - CORRECTED ✗
+  // From PDF eq 4.58: (a*alpha_a*cosθ - a*ω_a²*sinθ - b*ω_b²*sinβ) / (b*cosβ)
   const alpha2 =
-    (-r * alpha * cosTh +
-      r * omega * omega * sinTh +
+    (r * alpha * cosTh -
+      r * omega * omega * sinTh -
       l * omega2 * omega2 * sinBeta) /
     (l * cosBeta);
 
-  // 4. Slider Acceleration (as_ / C++ accs)
-  // FIXED: Updated to account for 'alpha' using the C++ c1/c2 algebraic grouping.
-  const c1 = r * alpha * Math.sin(beta - th) - l * omega2 * omega2;
-  const c2 = r * omega * omega * Math.cos(beta - th);
-  const as_ = (c1 - c2) / cosBeta;
+  // 4. Slider Acceleration - CORRECTED ✗
+  // From PDF eq 4.57: (a*alpha_a*sin(β-θ) - a*ω_a²*cos(β-θ) - b*ω_b²) / cosβ
+  const term1 = r * alpha * Math.sin(beta - th);
+  const term2 = r * omega * omega * Math.cos(beta - th);
+  const term3 = l * omega2 * omega2;
+  const as_ = (term1 - term2 - term3) / cosBeta;
 
   return { valid: true, beta, omega2, alpha2, vs, as_ };
 }
+
 // ─── Chart drawing ───────────────────────────────────────────────────────────
 
 function drawMech(canvas: HTMLCanvasElement, p: Params, dark: boolean) {
@@ -1391,13 +1383,13 @@ export default function SliderCrankPage() {
                   <span className="font-medium text-black/60 dark:text-neutral-400">
                     Rod Ang. Acc (α₂):
                   </span>{" "}
-                  <InlineMath math="\alpha_b = \frac{-a \omega_a^2 \sin \theta - b \omega_b^2 \sin \beta}{b \cos \beta}" />
+                  <InlineMath math="\alpha_b = \frac{a \alpha_a \cos \theta - a \omega_a^2 \sin \theta - b \omega_b^2 \sin \beta}{b \cos \beta}" />
                 </div>
                 <div>
                   <span className="font-medium text-black/60 dark:text-neutral-400">
                     Slider Acc (aₛ):
                   </span>{" "}
-                  <InlineMath math="\ddot{d} = \frac{-a \omega_a^2 \cos(\beta - \theta) - b \omega_b^2}{\cos \beta}" />
+                  <InlineMath math="\ddot{d} = \frac{a \alpha_a \sin(\beta - \theta) - a \omega_a^2 \cos(\beta - \theta) - b \omega_b^2}{\cos \beta}" />
                 </div>
               </div>
             </div>

@@ -709,38 +709,27 @@ function solveFourBar(
 
   const theta = (theta2Deg * Math.PI) / 180;
 
-  // ── Step 1: Displacement – φ (Eqs. 4.5–4.7) ────────────────────────────
+  // ── Step 1: Displacement – φ ────────────────────────────
 
   const k = (a * a - b * b + c * c + d * d) / 2;
-
   const A = k - a * (d - c) * Math.cos(theta) - c * d;
-
   const B = -2 * a * c * Math.sin(theta);
-
   const C = k - a * (d + c) * Math.cos(theta) + c * d;
 
   if (Math.abs(A) < 1e-9) {
     if (Math.abs(B) < 1e-9)
       return {
         valid: false,
-
         singularity: false,
-
         theta3: 0,
-
         theta4: 0,
-
         omega3: 0,
-
         omega4: 0,
-
         alpha3: 0,
-
         alpha4: 0,
       };
 
     const phi = 2 * Math.atan(-C / B);
-
     return finalize(a, b, c, d, theta, phi, omega2, alpha2);
   }
 
@@ -767,7 +756,7 @@ function solveFourBar(
 
   const sq = Math.sqrt(disc);
 
-  const phi_a = 2 * Math.atan((-B + sq) / (2 * A)); // Eq. 4.7
+  const phi_a = 2 * Math.atan((-B + sq) / (2 * A));
 
   const phi_b = 2 * Math.atan((-B - sq) / (2 * A));
 
@@ -797,7 +786,7 @@ function finalize(
   omega2: number,
   alpha2: number,
 ): FourBarResult {
-  // ── Step 2: Coupler angle β (Eqs. 4.8 & 4.9) ────────────────────────────
+  // ── Step 2: Coupler angle β────────────────────────────
 
   const sinBeta = (c * Math.sin(phi) - a * Math.sin(theta)) / b;
 
@@ -805,7 +794,7 @@ function finalize(
 
   const beta = Math.atan2(sinBeta, cosBeta);
 
-  // ── Step 3: Velocity (Eqs. 4.16, 4.17) ──────────────────────────────────
+  // ── Step 3: Velocity  ──────────────────────────────────
 
   const sinBmP = Math.sin(beta - phi); // sin(β − φ)
 
@@ -829,11 +818,11 @@ function finalize(
     };
   }
 
-  // Eq. 4.16:  ω_c = aω_a sin(β−θ) / (c sin(β−φ))
+  // ω_c = aω_a sin(β−θ) / (c sin(β−φ))
 
   const omega_c = (a * omega2 * Math.sin(beta - theta)) / (c * sinBmP);
 
-  // Eq. 4.17:  ω_b = −aω_a sin(φ−θ) / (b sin(φ−β))
+  // ω_b = −aω_a sin(φ−θ) / (b sin(φ−β))
 
   // sin(φ−β) = −sin(β−φ) = −sinBmP
 
@@ -841,7 +830,7 @@ function finalize(
 
   // ── Step 4: Acceleration (Eqs. 4.22, 4.23) ──────────────────────────────
 
-  // Eq. 4.23 — α_c (output link):
+  // α_c (output link):
 
   //   α_c = [ aα_a sin(β−θ) − aω_a² cos(β−θ) − bω_b² + cω_c² cos(β−φ) ]
 
@@ -854,7 +843,7 @@ function finalize(
       c * omega_c * omega_c * Math.cos(beta - phi)) /
     (c * sinBmP);
 
-  // Eq. 4.22 — α_b (coupler link):
+  // α_b (coupler link):
 
   //   α_b = [ aα_a sin(φ−θ) − aω_a² cos(φ−θ) − bω_b² cos(φ−β) + cω_c² ]
 
@@ -1039,7 +1028,7 @@ function drawCurves(
   p: Params,
   mode: "vel" | "acc",
   dark: boolean,
-  hover: { x: number; y: number } | null
+  hover: { x: number; y: number } | null,
 ): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -1171,7 +1160,6 @@ function drawCurves(
       ctx.lineTo(x, PAD.top + CH);
       ctx.stroke();
       ctx.setLineDash([]);
-      
 
       // Draw point
       const drawPoint = (v: number | null, color: string) => {
@@ -1207,8 +1195,6 @@ function drawCurves(
 
       ctx.fillText(`θ₂: ${angle}°`, boxX + 8, boxY + 14);
 
-      
-
       if (v1 !== null)
         ctx.fillText(
           `${mode === "vel" ? "ω₃" : "α₃"}: ${v1.toFixed(2)}`,
@@ -1239,20 +1225,18 @@ const PRESETS = [
     L4: 50,
   },
   { name: "Parallelogram", L1: 100, L2: 50, L3: 100, L4: 50 },
-//   {
-//     name: "Khurmi Input Case",
-//     L1: 80,
-//     L2: 20,
-//     L3: 66,
-//     L4: 56,
-//     omega2: 10.5,
-//     theta2: 0,
-//   },
+  //   {
+  //     name: "Khurmi Input Case",
+  //     L1: 80,
+  //     L2: 20,
+  //     L3: 66,
+  //     L4: 56,
+  //     omega2: 10.5,
+  //     theta2: 0,
+  //   },
 ];
 
 // ─── Main component ──────────────────────────────────────────────────────────
-
-
 
 export default function FourBarPage() {
   const [p, setP] = useState<Params>({
@@ -1271,7 +1255,6 @@ export default function FourBarPage() {
   const [tableInterval, setTableInterval] = useState<number>(15);
 
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
-  
 
   const mechRef = useRef<HTMLCanvasElement | null>(null);
   const velRef = useRef<HTMLCanvasElement | null>(null);
